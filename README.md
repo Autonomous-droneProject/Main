@@ -85,6 +85,6 @@ deepSORT is ideal for more robust environments due to its improved pattern recog
 
 Both models are fully compatible with the shared YOLO input module and Kalman-based tracking system.
 
-Full integration with drone sensors and microcontroller enables in-field deployment.
+Full integration with drone sensors and microcontroller enables in-field deployment
 
 
