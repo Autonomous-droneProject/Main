@@ -2,6 +2,7 @@
 
 #Contain the CNN that deepSORT uses in replace of the Hungarion based Cost Matrix
 from filterpy.kalman import KalmanFilter
+import numpy as np
 
 class DataAssociation:
     import numpy as np
@@ -23,7 +24,7 @@ class DataAssociation:
         pass
 
     #Bounding Box Ratio Based Cost Matrix (𝑅(𝐷,𝑃))
-    def bbox_ratio_cost(tracks, detections):
+    def bbox_ratio_cost(self, tracks, detections):
         """
         Computes the bounding box ratio-based cost matrix (𝑅(𝐷,𝑃)), which is
         implemented as a ratio between the product of each width and height.
@@ -32,8 +33,21 @@ class DataAssociation:
 
         This metric gives values closer to 1 for similar box shapes and values
         closer to 0 for significantly different boxes.
-        """
-        pass
+        """   
+        # assuming detections/tracks is a list of list
+        num_tracks, num_detections = len(tracks), len(detections)
+        if num_tracks == 0 or num_detections == 0:
+            return np.array([])
+        
+        bbox_cost_matrix = np.zeros((num_tracks, num_detections))
+        for i in range(num_tracks):
+            for j in range(num_detections):
+                # calculates ratio for assigning detection to track
+                ratio1 = (detections[j][2] * detections[j][3]) / (tracks[i][2] * tracks[i][3])
+                ratio2 = (tracks[i][2] * tracks[i][3]) / (detections[j][3] * detections[j][3])
+                bbox_cost_matrix[i, j] = min(ratio1, ratio2) # ensures between 0 and 1
+        return bbox_cost_matrix
+        
 
     #SORT’s IoU Cost Matrix
     def iou_cost(tracks, detections):
