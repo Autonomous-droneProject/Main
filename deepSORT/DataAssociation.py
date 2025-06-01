@@ -44,7 +44,7 @@ class DataAssociation:
                 # calculates ratio for assigning detection to track
                 ratio1 = (detections[j][2] * detections[j][3]) / (tracks[i][2] * tracks[i][3])
                 ratio2 = (tracks[i][2] * tracks[i][3]) / (detections[j][2] * detections[j][3])
-                bbox_cost_matrix[i, j] = 1 - min(ratio1, ratio2) # ensures between 0 and 1
+                bbox_cost_matrix[i, j] = 1.0 - min(ratio1, ratio2) # ensures between 0 and 1
         return bbox_cost_matrix
         
 
