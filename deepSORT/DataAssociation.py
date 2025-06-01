@@ -31,8 +31,7 @@ class DataAssociation:
 
         r(Di, Pi) = min( (w_Di * h_Di) / (w_Pi * h_Pi), (w_Pi * h_Pi) / (w_Di * h_Di) )
 
-        This metric gives values closer to 1 for similar box shapes and values
-        closer to 0 for significantly different boxes.
+        Returns a cost matrix where lower values indicate better box shape alignment.
         """   
         # assuming detections/tracks is a list of list
         num_tracks, num_detections = len(tracks), len(detections)
@@ -44,8 +43,8 @@ class DataAssociation:
             for j in range(num_detections):
                 # calculates ratio for assigning detection to track
                 ratio1 = (detections[j][2] * detections[j][3]) / (tracks[i][2] * tracks[i][3])
-                ratio2 = (tracks[i][2] * tracks[i][3]) / (detections[j][3] * detections[j][3])
-                bbox_cost_matrix[i, j] = min(ratio1, ratio2) # ensures between 0 and 1
+                ratio2 = (tracks[i][2] * tracks[i][3]) / (detections[j][2] * detections[j][3])
+                bbox_cost_matrix[i, j] = 1 - min(ratio1, ratio2) # ensures between 0 and 1
         return bbox_cost_matrix
         
 
