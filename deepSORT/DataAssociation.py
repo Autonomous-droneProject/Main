@@ -152,7 +152,7 @@ class DataAssociation:
     def class_gate_cost_matrix(self, cost_matrix, track_classes, detection_classes):
         """
         Updates the cost matrix based on the match between predicted and detected
-        object class. If the class labels do not match, the cost is set to infinity:
+        object class. If the class labels do not match, the cost is set to 0:
 
         C*(Ci, j, Di, Pi) = { Ci, j if Class_Di = Class_Pi, 0 otherwise }
 
