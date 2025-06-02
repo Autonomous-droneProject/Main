@@ -131,22 +131,21 @@ class DataAssociation:
             lambda_de /= sum_lambdas
             lambda_r /= sum_lambdas
 
-        cost_iou = self.iou_cost(tracks,detections)
-        cost_de_similarity = self.euclidean_cost(tracks, detections, image_dims)
-        cost_r_similarity = self.bbox_ratio_cost(tracks, detections)
+        #Compute the cost matrices using other cost functions. All other functions SHOULD return cost matrices, if not change to: 1.0 - output_matrix
+        cost_iou = self.iou_cost(tracks,detections) 
+        cost_euclidean = self.euclidean_cost(tracks, detections, image_dims)
+        cost_ratio = self.bbox_ratio_cost(tracks, detections)
 
-        # Convert similarity metrics to cost metrics for the weighted mean cost matrix calculation
-        # cost_iou is already a cost (1-IoU)
-        # cost_de_actual = 1 - (1 - normalized_distance) = normalized_distance
-        cost_de_actual = 1.0 - cost_de_similarity
-        # cost_r_actual = 1 - ratio_similarity
-        cost_r_actual = 1.0 - cost_r_similarity
-
-        for i in range(num_tracks):
-            for j in range(num_detections):
-                cost_matrix[i, j] = (lambda_iou * cost_iou[i, j] + lambda_de * cost_de_actual[i, j] + lambda_r * cost_r_actual[i, j])
+        #Vectorized weight sum. NumPy arrays are implemented in C under the hood.
+        #So with these arrays, math operations are executed in compiled C code, not interpreted Python
+        #Rather than iterating through with nested loops, we can perform vector/matrix multiplication on the arrays as a whole
+        cost_matrix = (
+            lambda_iou * cost_iou +
+            lambda_de * cost_euclidean +
+            lambda_r * cost_ratio
+        )
+        
         return cost_matrix
-
 
 
     #Class Gate Update Based on Object Class Match (𝐶∗(𝐷,𝑃))
@@ -168,11 +167,12 @@ class DataAssociation:
         if num_tracks != (track_classes) or num_detections != len(detection_classes):
             raise ValueError("Dimensions of cost_matrix, track_classes, and detection_classes do not match - Class Gate Cost Matrix")
 
-        gated_cost_matrix = np.copy(cost_matrix)
-
-        for i in range(num_tracks):
-            for j in range(num_detections):
-                if track_classes[i] != detection_classes[j]:
-                    gated_cost_matrix[i, j] = 0.0
-
+        #Create a boolean mask where classses match
+        #             Reshapes to (num_tracks, 1)     Reshapes to (1, num_detections)
+        match_mask = (track_classes[:, None] == detection_classes[None, :]) #Shape = [num_tracks, num_detections]
+        #Because track_classes has the same number of columns as detection_classes has rows, we can perform matrix multiplication
+        
+        #Apply the mask and keep the values where classes match, zero where they do not
+        gated_cost_matrix = cost_matrix * match_mask
+        
         return gated_cost_matrix
