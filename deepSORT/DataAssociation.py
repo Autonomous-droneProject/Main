@@ -115,13 +115,14 @@ class DataAssociation:
         It calculates a combined cost based on the Intersection over Union (IoU), 
         Euclidean distance, and bounding box ratio metrics, using specified weights.
         '''
-        num_tracks = len(tracks)
         num_detections = len(detections)
+        num_tracks = len(tracks)
+        
 
-        if num_tracks == 0 or num_detections == 0:
+        if num_detections == 0 or num_tracks == 0:
             return np.array([]) #Return an empty array if there are no tracks or detections
 
-        cost_matrix = np.zeros((num_tracks, num_detections))
+        cost_matrix = np.zeros((num_detections, num_tracks))
 
         #Ensure the weights sum to 1.0
         sum_lambdas = lambda_iou + lambda_de + lambda_r
