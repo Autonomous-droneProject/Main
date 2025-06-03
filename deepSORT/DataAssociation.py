@@ -26,7 +26,22 @@ class DataAssociation:
 
         where (h, w) are the height and width of the input image.
         """
-        pass
+        #Retrive lengths
+        N_detections = len(detections)
+        N_predictions = len(tracks)
+        #Create empty cost matrix of size (D, P)
+        euclidean_cost_matrix = np.zeros((N_detections, N_predictions))
+        #Calculate norm based off image size
+        norm = 0.5 * np.sqrt(image_dims[0]**2 + image_dims[1]**2)
+        #fill cost matrix with normalized euclidean distance
+        for i in range(N_detections):
+            for j in range(N_predictions):
+                delta_x = detections[i][0] - tracks[j][0]
+                delta_y = detections[i][1] - tracks[j][1]
+                euclidean_distance = np.sqrt(delta_x**2 + delta_y**2)
+                #Max function ensures range of (1.0 - 0.0)
+                euclidean_cost_matrix[i][j] = max(1 - (euclidean_distance/norm), 0.0)
+        return euclidean_cost_matrix
 
     #Bounding Box Ratio Based Cost Matrix (𝑅(𝐷,𝑃))
     def bbox_ratio_cost(self, tracks, detections):
@@ -75,7 +90,15 @@ class DataAssociation:
 
         where ∘ represents element-wise multiplication.
         """
-        pass
+        #Call iou cost matrix
+        iou_matrix = np.array(self.iou_cost(tracks, detections))
+        #Call euclidean cost matrix
+        euclidean_matrix = np.array(self.euclidean_cost(tracks, detections, image_dims))
+        #Perform Hadamard product
+        iou_euclidean_cost_matrix = iou_matrix * euclidean_matrix
+        #Return as list
+        return iou_euclidean_cost_matrix.tolist()
+
 
     #SORT’s IoU Cost Matrix Combined with the Bounding Box Ratio Based Cost Matrix (𝑅𝐼𝑜𝑈(𝐷,𝑃))
     def iou_bbox_ratio_cost(self, tracks, detections):
