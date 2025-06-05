@@ -35,13 +35,41 @@ class DataAssociation:
         """
         pass
 
-    #SORT’s IoU Cost Matrix
-    def iou_cost(tracks, detections):
-        """
-        Computes the Intersection over Union (IoU) cost matrix between detections
-        and predictions. Lower values indicate better matches.
-        """
-        pass
+   #SORT’s IoU Cost Matrix
+    def iou_cost(detections,tracks):
+        
+        numDetections = len(detections)
+        numTracks = len(tracks)
+        cost_matrix = np.zeros((numDetections,numTracks))
+        
+        for i in range(numDetections):
+            for j in range(numTracks):
+                det = detections[i]
+                trk = tracks[j]
+            
+                xA,yA,wA,hA = det
+                xB,yB,wB,hB = trk
+                
+                areaA = wA * hA
+                areaB = wB *hB
+
+                inter_x1 = max(xA,xB)
+                inter_y1 = max(yA, yB)
+                inter_x2 = min(xA + wA, xB+ wB)
+                inter_y2 = min(yA +hA, yB + hB)
+ 
+                inter_Width = max(0,inter_x2 - inter_x1)
+                inter_Height = max(0, inter_y2 - inter_y1)
+
+                AoI = inter_Width * inter_Height
+                AoU = areaA + areaB - AoI
+                IoU = AoI / AoU if AoU != 0 else 0
+
+                cost_matrix[i][j] = 1 - IoU
+
+        
+       
+        return cost_matrix
 
     #SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
     def iou_euclidean_cost(tracks, detections, image_dims):
