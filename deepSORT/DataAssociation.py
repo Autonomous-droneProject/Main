@@ -22,25 +22,26 @@ class DataAssociation:
         problem, the distance is obtained by the difference between 1 and the
         normalized Euclidean distance.
 
-        d(Di, Pi) = 1 - sqrt((u_Di - u_Pi)^2 + (v_Di - v_Pi)^2) / sqrt(1/2 * (h^2 + w^2))
+        d(Di, Pi) = 1 - sqrt((u_Di - u_Pi)^2 + (v_Di - v_Pi)^2) / (1/2) * sqrt(h^2 + w^2)
 
         where (h, w) are the height and width of the input image.
         """
         #Retrive lengths
+        tracks = np.array(tracks, copy=False)
+        detections = np.array(detections, copy=False)
         N_detections = len(detections)
         N_predictions = len(tracks)
-        #Create empty cost matrix of size (D, P)
-        euclidean_cost_matrix = np.zeros((N_detections, N_predictions))
+        #Store bounding boxes centers for computation
+        tracks_pos = tracks[:, 0:2]
+        detections_pos = detections[:, 0:2]
         #Calculate norm based off image size
         norm = 0.5 * np.sqrt(image_dims[0]**2 + image_dims[1]**2)
-        #fill cost matrix with normalized euclidean distance
-        for i in range(N_detections):
-            for j in range(N_predictions):
-                delta_x = detections[i][0] - tracks[j][0]
-                delta_y = detections[i][1] - tracks[j][1]
-                euclidean_distance = np.sqrt(delta_x**2 + delta_y**2)
-                #Max function ensures range of (1.0 - 0.0)
-                euclidean_cost_matrix[i][j] = max(1 - (euclidean_distance/norm), 0.0)
+        #Subtract so u_Di - u_Pi & v_Di - v_Pi
+        delta = detections_pos[:, None, :] - tracks_pos[None, :, :]
+        #Perform linear norm of sum of deltas
+        dist_matrix = np.linalg.norm(delta, axis=2)  
+        #Compute cost matrix
+        euclidean_cost_matrix = 1.0 - (dist_matrix / norm)        
         return euclidean_cost_matrix
 
     #Bounding Box Ratio Based Cost Matrix (𝑅(𝐷,𝑃))
@@ -97,7 +98,7 @@ class DataAssociation:
         #Perform Hadamard product
         iou_euclidean_cost_matrix = iou_matrix * euclidean_matrix
         #Return as list
-        return iou_euclidean_cost_matrix.tolist()
+        return iou_euclidean_cost_matrix
 
 
     #SORT’s IoU Cost Matrix Combined with the Bounding Box Ratio Based Cost Matrix (𝑅𝐼𝑜𝑈(𝐷,𝑃))
