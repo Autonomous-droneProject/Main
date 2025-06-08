@@ -7,10 +7,10 @@ import numpy as np
 class DataAssociation:
     """
     For all parameters:
-    tracks : List[deep_sort.track.Track]
-        A list of tracks.
-    detections : List[deep_sort.detection.Detection]
-        A list of detections.
+    tracks : List[List[float]] or List[np.ndarray]
+        A list of bounding boxes representing predicted tracks, each in the format [x, y, w, h].
+    detections : List[List[float]] or List[np.ndarray]  
+         A list of bounding boxes representing current detections, each in the format [x, y, w, h].
     """
 
     #Euclidean Distance Based Cost Matrix (𝐷𝐸(𝐷,𝑃))
@@ -22,7 +22,7 @@ class DataAssociation:
         problem, the distance is obtained by the difference between 1 and the
         normalized Euclidean distance.
 
-        d(Di, Pi) = 1 - sqrt((u_Di - u_Pi)^2 + (v_Di - v_Pi)^2) / (1/2) * sqrt(h^2 + w^2)
+        d(Di, Pi) = 1 - [sqrt((u_Di - u_Pi)^2 + (v_Di - v_Pi)^2) / (1/2) * sqrt(h^2 + w^2)]
 
         where (h, w) are the height and width of the input image.
         """
@@ -55,9 +55,14 @@ class DataAssociation:
         Returns a cost matrix where lower values indicate better box shape alignment.
 
         Box shape similarity ranges from 0 (different) to 1 (identical), and is converted to cost as:
-        cost_r = 1.0 - similarity_r.
-        
+        cost_r = 1.0 - similarity_r.     
         """ 
+        
+        # assuming detections/tracks is a list of list
+        num_tracks, num_detections = len(tracks), len(detections)
+        if num_tracks == 0 or num_detections == 0:
+            return np.array([])
+ 
         if len(tracks) == 0 or len(detections) == 0:
             return np.array([])
 
@@ -118,7 +123,22 @@ class DataAssociation:
 
         where ∘ represents element-wise multiplication.
         """
-        pass
+        num_tracks, num_detections = len(tracks), len(detections)
+
+        if num_tracks == 0 or num_detections == 0:
+            return np.array([])
+        
+        cost_iou = np.asarray(self.iou_cost(detections, tracks))  # IoU cost matrix
+        cost_bbr = np.asarray(self.bbox_ratio_cost(tracks, detections))  # Bounding box ratio cost matrix
+
+        if np.shape(cost_iou) != np.shape(cost_bbr):
+            raise ValueError("IoU cost matrix and bbox ratio cost matrix are of different shapes")
+
+        return cost_iou * cost_bbr  # Element-wise multiplication
+   
+
+
+
 
     #Euclidean Distance Cost Matrix Combined with the Bounding Box Ratio Based Cost Matrix (𝑅𝐷𝐸(𝐷,𝑃))
     def euclidean_bbox_ratio_cost(self, tracks, detections, image_dims):
