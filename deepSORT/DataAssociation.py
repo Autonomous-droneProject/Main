@@ -22,26 +22,32 @@ class DataAssociation:
         problem, the distance is obtained by the difference between 1 and the
         normalized Euclidean distance.
 
-        d(Di, Pi) = 1 - sqrt((u_Di - u_Pi)^2 + (v_Di - v_Pi)^2) / (1/2) * sqrt(h^2 + w^2)
+        d(Di, Pi) = 1 - [sqrt((u_Di - u_Pi)^2 + (v_Di - v_Pi)^2) / (1/2) * sqrt(h^2 + w^2)]
 
         where (h, w) are the height and width of the input image.
         """
-        #Retrive lengths
+        #Retrieve lengths
         tracks = np.array(tracks, copy=False)
         detections = np.array(detections, copy=False)
         N_detections = len(detections)
         N_predictions = len(tracks)
+
         #Store bounding boxes centers for computation
         tracks_pos = tracks[:, 0:2]
         detections_pos = detections[:, 0:2]
+
         #Calculate norm based off image size
         norm = 0.5 * np.sqrt(image_dims[0]**2 + image_dims[1]**2)
+
         #Subtract so u_Di - u_Pi & v_Di - v_Pi
         delta = detections_pos[:, None, :] - tracks_pos[None, :, :]
+
         #Perform linear norm of sum of deltas
         dist_matrix = np.linalg.norm(delta, axis=2)  
+
         #Compute cost matrix
-        euclidean_cost_matrix = 1.0 - (dist_matrix / norm)        
+        euclidean_cost_matrix = 1.0 - (dist_matrix / norm)     
+
         return euclidean_cost_matrix
 
     #Bounding Box Ratio Based Cost Matrix (𝑅(𝐷,𝑃))
@@ -55,8 +61,7 @@ class DataAssociation:
         Returns a cost matrix where lower values indicate better box shape alignment.
 
         Box shape similarity ranges from 0 (different) to 1 (identical), and is converted to cost as:
-        cost_r = 1.0 - similarity_r.
-        
+        cost_r = 1.0 - similarity_r.     
         """ 
         if len(tracks) == 0 or len(detections) == 0:
             return np.array([])
@@ -100,11 +105,13 @@ class DataAssociation:
         """
         #Call iou cost matrix
         iou_matrix = np.array(self.iou_cost(tracks, detections))
+
         #Call euclidean cost matrix
         euclidean_matrix = np.array(self.euclidean_cost(tracks, detections, image_dims))
+
         #Perform Hadamard product
         iou_euclidean_cost_matrix = iou_matrix * euclidean_matrix
-        #Return as list
+
         return iou_euclidean_cost_matrix
 
 
