@@ -5,11 +5,16 @@ from filterpy.kalman import KalmanFilter
 import numpy as np
 
 class DataAssociation:
-    import numpy as np
-    from scipy.spatial.distance import cosine
+    """
+    For all parameters:
+    tracks : List[deep_sort.track.Track]
+        A list of tracks.
+    detections : List[deep_sort.detection.Detection]
+        A list of detections.
+    """
 
     #Euclidean Distance Based Cost Matrix (𝐷𝐸(𝐷,𝑃))
-    def euclidean_cost(tracks, detections, image_dims):
+    def euclidean_cost(self, tracks, detections, image_dims):
         """
         Computes the Euclidean distance cost matrix (𝐷𝐸(𝐷,𝑃)), which represents
         the distance between bounding box central points normalized into half
@@ -17,35 +22,74 @@ class DataAssociation:
         problem, the distance is obtained by the difference between 1 and the
         normalized Euclidean distance.
 
-        d(Di, Pi) = 1 - sqrt((u_Di - u_Pi)^2 + (v_Di - v_Pi)^2) / sqrt(1/2 * (h^2 + w^2))
+        d(Di, Pi) = 1 - sqrt((u_Di - u_Pi)^2 + (v_Di - v_Pi)^2) / (1/2) * sqrt(h^2 + w^2)
 
         where (h, w) are the height and width of the input image.
         """
-        pass
+        #Retrive lengths
+        tracks = np.array(tracks, copy=False)
+        detections = np.array(detections, copy=False)
+        N_detections = len(detections)
+        N_predictions = len(tracks)
+        #Store bounding boxes centers for computation
+        tracks_pos = tracks[:, 0:2]
+        detections_pos = detections[:, 0:2]
+        #Calculate norm based off image size
+        norm = 0.5 * np.sqrt(image_dims[0]**2 + image_dims[1]**2)
+        #Subtract so u_Di - u_Pi & v_Di - v_Pi
+        delta = detections_pos[:, None, :] - tracks_pos[None, :, :]
+        #Perform linear norm of sum of deltas
+        dist_matrix = np.linalg.norm(delta, axis=2)  
+        #Compute cost matrix
+        euclidean_cost_matrix = 1.0 - (dist_matrix / norm)        
+        return euclidean_cost_matrix
 
     #Bounding Box Ratio Based Cost Matrix (𝑅(𝐷,𝑃))
-    def bbox_ratio_cost(tracks, detections):
+    def bbox_ratio_cost(self, tracks, detections):
         """
         Computes the bounding box ratio-based cost matrix (𝑅(𝐷,𝑃)), which is
         implemented as a ratio between the product of each width and height.
 
         r(Di, Pi) = min( (w_Di * h_Di) / (w_Pi * h_Pi), (w_Pi * h_Pi) / (w_Di * h_Di) )
 
-        This metric gives values closer to 1 for similar box shapes and values
-        closer to 0 for significantly different boxes.
-        """
-        pass
+        Returns a cost matrix where lower values indicate better box shape alignment.
+
+        Box shape similarity ranges from 0 (different) to 1 (identical), and is converted to cost as:
+        cost_r = 1.0 - similarity_r.
+        
+        """ 
+        if len(tracks) == 0 or len(detections) == 0:
+            return np.array([])
+
+        detections = np.array(detections) # (D, 4)
+        tracks = np.array(tracks) # (T, 4)
+
+        # Gets every width and height from each row into 2 1D arrays and calculates area
+        detection_areas = detections[:, 2] * detections[:, 3]
+        track_areas = tracks[:, 2] * tracks[:, 3] # (T,) = (T,) * (T,)
+
+        # Transform the 1D arrays to broadcast into (D, T)
+        detection_areas = detection_areas[:, None]# (D, 1): [[1], [2], [3]] 
+        track_areas = track_areas[None, :] #        (1, T): [[1, 2, 3, 4]]
+
+        # Calculates ratio and broadcasts to (D, T)
+        ratio1 = detection_areas / track_areas
+        ratio2 = track_areas / detection_areas
+
+        # Calculates cost at every [i, j]
+        bbox_cost_matrix = 1.0 - np.minimum(ratio1, ratio2)
+        return bbox_cost_matrix
 
     #SORT’s IoU Cost Matrix
-    def iou_cost(tracks, detections):
+    def iou_cost(self, tracks, detections):
         """
         Computes the Intersection over Union (IoU) cost matrix between detections
         and predictions. Lower values indicate better matches.
         """
         pass
 
-    #SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
-    def iou_euclidean_cost(tracks, detections, image_dims):
+    #   SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
+    def iou_euclidean_cost(self, tracks, detections, image_dims):
         """
         Computes the IoU cost matrix combined with the Euclidean distance cost
         matrix using the Hadamard (element-wise) product:
@@ -54,10 +98,18 @@ class DataAssociation:
 
         where ∘ represents element-wise multiplication.
         """
-        pass
+        #Call iou cost matrix
+        iou_matrix = np.array(self.iou_cost(tracks, detections))
+        #Call euclidean cost matrix
+        euclidean_matrix = np.array(self.euclidean_cost(tracks, detections, image_dims))
+        #Perform Hadamard product
+        iou_euclidean_cost_matrix = iou_matrix * euclidean_matrix
+        #Return as list
+        return iou_euclidean_cost_matrix
+
 
     #SORT’s IoU Cost Matrix Combined with the Bounding Box Ratio Based Cost Matrix (𝑅𝐼𝑜𝑈(𝐷,𝑃))
-    def iou_bbox_ratio_cost(tracks, detections):
+    def iou_bbox_ratio_cost(self, tracks, detections):
         """
         Computes the IoU cost matrix combined with the bounding box ratio-based
         cost matrix using the Hadamard (element-wise) product:
@@ -69,7 +121,7 @@ class DataAssociation:
         pass
 
     #Euclidean Distance Cost Matrix Combined with the Bounding Box Ratio Based Cost Matrix (𝑅𝐷𝐸(𝐷,𝑃))
-    def euclidean_bbox_ratio_cost(tracks, detections, image_dims):
+    def euclidean_bbox_ratio_cost(self, tracks, detections, image_dims):
         """
         Computes the Euclidean distance cost matrix combined with the bounding box
         ratio-based cost matrix using the Hadamard (element-wise) product:
@@ -78,10 +130,22 @@ class DataAssociation:
 
         where ∘ represents element-wise multiplication.
         """
-        pass
+        num_tracks, num_detections = len(tracks), len(detections)
+        if num_detections == 0 or num_tracks == 0:
+            return np.array([])
+        
+        cost_de = np.asarray(self.euclidean_cost(tracks, detections, image_dims))
+        cost_r = np.asarray(self.bbox_ratio_cost(tracks, detections))
 
-    #Step 7: SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix and the Bounding Box Ratio Based Cost Matrix (𝑀(𝐷,𝑃))
-    def combined_cost_matrix(tracks, detections, image_dims):
+        if np.shape(cost_de) != np.shape(cost_r):
+            raise ValueError("Euclidean cost matrix and bbox ratio cost matrix are of different shapes")
+
+        # performs element-wise multiplication
+        cost_rde = np.multiply(cost_de, cost_r)
+        return cost_rde
+
+    #Step 7: SORT's IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix and the Bounding Box Ratio Based Cost Matrix (𝑀(𝐷,𝑃))
+    def combined_cost_matrix(self, tracks, detections, image_dims):
         """
         Computes the IoU cost matrix combined with the Euclidean distance cost
         matrix and the bounding box ratio-based cost matrix using the Hadamard
@@ -91,10 +155,33 @@ class DataAssociation:
 
         where ∘ represents element-wise multiplication.
         """
-        pass
+
+        num_tracks = len(tracks)
+        num_detections = len(detections)
+
+        if num_tracks == 0 or num_detections == 0:
+            return np.array([])
+        
+        matrix_iou = self.iou_cost(tracks, detections) #Already lower is better
+        matrix_de = self.euclidean_cost(tracks, detections, image_dims)
+        matrix_r = self.bbox_ratio_cost(tracks, detections)
+
+        # Ensure all matrices have the same shape
+        if matrix_iou.shape != (num_tracks, num_detections) or \
+           matrix_de.shape != (num_tracks, num_detections) or \
+           matrix_r.shape != (num_tracks, num_detections):
+            raise ValueError("Cost matrices must have the same shape.")
+        
+        # Compute the combined cost matrix using element-wise multiplication
+        # Each component is already a cost (lower = better), so multiplication is safe
+        combined_matrix = matrix_iou * matrix_de * matrix_r
+
+        return combined_matrix
+    
+        
 
     #Element-wise Average of Every Cost Matrix (𝐴(𝐷,𝑃))
-    def average_cost_matrix(tracks, detections, image_dims):
+    def average_cost_matrix(self, tracks, detections, image_dims):
         """
         Computes the element-wise average of every cost matrix:
 
@@ -107,7 +194,7 @@ class DataAssociation:
         """
         Computes the element-wise weighted mean of every cost matrix value:
 
-        WM(Di, Pi) = (λ_IoU * IoU(Di, Pi) + λ_DE * DE(Di, Pi) + λ_R * R(Di, Pi)) / (λ_IoU + λ_DE + λ_R)
+        WM(Di, Pi) = (λ_IoU * IoU(Di, Pi) + λ_DE * DE(Di, Pi) + λ_R * R(Di, Pi))
 
         where λ_IoU + λ_DE + λ_R = 1.
         """
@@ -115,6 +202,7 @@ class DataAssociation:
         It calculates a combined cost based on the Intersection over Union (IoU), 
         Euclidean distance, and bounding box ratio metrics, using specified weights.
         '''
+
         num_detections = len(detections)
         num_tracks = len(tracks)
         
@@ -162,16 +250,16 @@ class DataAssociation:
         '''
         This function updates cost matrices based on the match between 
         predicted and detected object classes'''
-        num_tracks = cost_matrix.shape[0]
-        num_detections = cost_matrix.shape[1]
+        num_detections = cost_matrix.shape[0]
+        num_tracks = cost_matrix.shape[1]
 
         if num_tracks != (track_classes) or num_detections != len(detection_classes):
             raise ValueError("Dimensions of cost_matrix, track_classes, and detection_classes do not match - Class Gate Cost Matrix")
 
         #Create a boolean mask where classses match
         #             Reshapes to (num_tracks, 1)     Reshapes to (1, num_detections)
-        match_mask = (track_classes[:, None] == detection_classes[None, :]) #Shape = [num_tracks, num_detections]
-        #Because track_classes has the same number of columns as detection_classes has rows, we can perform matrix multiplication
+        match_mask = (detection_classes[:, None] == track_classes[None, :]) #Shape = [num_tracks, num_detections]
+        #Because detection_classes has the same number of rows as track_classes has columns, we can perform matrix multiplication
         
         #Apply the mask and keep the values where classes match, zero where they do not
         gated_cost_matrix = cost_matrix * match_mask
