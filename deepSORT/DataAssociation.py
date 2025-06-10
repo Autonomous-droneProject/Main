@@ -27,8 +27,8 @@ class DataAssociation:
         where (h, w) are the height and width of the input image.
         """
         #Retrieve lengths
-        tracks = np.array(tracks, copy=False)
-        detections = np.array(detections, copy=False)
+        tracks = np.array(tracks)
+        detections = np.array(detections)
         N_detections = len(detections)
         N_predictions = len(tracks)
 
@@ -85,12 +85,13 @@ class DataAssociation:
         bbox_cost_matrix = 1.0 - np.minimum(ratio1, ratio2)
         return bbox_cost_matrix
 
-  
+      
     #SORT’s IoU Cost Matrix
     def iou_cost(self,tracks,detections):
 
-        tracks = np.array(tracks, copy=False)
-        detections = np.array(detections,copy=False)
+        tracks = np.array(tracks)
+        detections = np.array(detections)
+
 
         det_x1 = detections[:, 0:1]
         det_y1 = detections[:, 1:2]
@@ -105,6 +106,7 @@ class DataAssociation:
         detectionWidth = detections[:,2:3]
         detectionHeight = detections[:,3:4]
 
+
         areaDetection = detectionWidth * detectionHeight
         areaTrack = tracks[:, 2].reshape(1, -1) * tracks[:, 3].reshape(1, -1)
 
@@ -116,15 +118,21 @@ class DataAssociation:
         inter_w = np.maximum(0.0, inter_x2 - inter_x1)
         inter_h = np.maximum(0.0, inter_y2 - inter_y1)
 
+ 
+
         "AoI = Area of Intersection, AoU = Area of Union"
         AoI = inter_w * inter_h
         AoU = areaDetection + areaTrack - AoI
 
         iou_matrix = np.where(AoU > 0, AoI / AoU, 0.0)
-        
+
+
+
+
+
         return 1.0 - iou_matrix
 
-    #SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
+    #   SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
     def iou_euclidean_cost(self, tracks, detections, image_dims):
         """
         Computes the IoU cost matrix combined with the Euclidean distance cost
@@ -161,7 +169,7 @@ class DataAssociation:
         if num_tracks == 0 or num_detections == 0:
             return np.array([])
         
-        cost_iou = np.asarray(self.iou_cost(tracks, detections))  # IoU cost matrix
+        cost_iou = np.asarray(self.iou_cost(detections, tracks))  # IoU cost matrix
         cost_bbr = np.asarray(self.bbox_ratio_cost(tracks, detections))  # Bounding box ratio cost matrix
 
         if np.shape(cost_iou) != np.shape(cost_bbr):
