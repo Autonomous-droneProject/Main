@@ -42,30 +42,41 @@ class DataAssociation:
         numTracks = len(tracks)
         cost_matrix = np.zeros((numDetections,numTracks))
         
-        for i in range(numDetections):
-            for j in range(numTracks):
-                det = detections[i]
-                trk = tracks[j]
+        det_x1 = detections[:, 0:1]
+        det_y1 = detections[:, 1:2]
+        det_x2 = det_x1 + detections[:, 2:3]
+        det_y2 = det_y1 + detections[:, 3:4]
+
+        trk_x1 = tracks[:, 0]
+        trk_y1 = tracks[:, 1]
+        trk_x2 = trk_x1 + tracks[:, 2]
+        trk_y2 = trk_y1 + tracks[:, 3]
             
-                xA,yA,wA,hA = det
-                xB,yB,wB,hB = trk
-                
-                areaA = wA * hA
-                areaB = wB *hB
+        detectionWidth = detections[:,2:3]
+        detectionHeight = detections[:,3:4]
+        trackWidth = tracks[:,2]
+        trackHeight = tracks[:,3]
+               
+        areaDetection = detectionWidth * detectionHeight
+        areaTrack = trackWidth * trackHeight  
 
-                inter_x1 = max(xA,xB)
-                inter_y1 = max(yA, yB)
-                inter_x2 = min(xA + wA, xB+ wB)
-                inter_y2 = min(yA +hA, yB + hB)
+        inter_x1 = np.maximum(det_x1, trk_x1)
+        inter_y1 = np.maximum(det_y1, trk_y1)
+        inter_x2 = np.minimum(det_x2, trk_x2)
+        inter_y2 = np.minimum(det_y2, trk_y2)
+
+        inter_w = np.maximum(0.0, inter_x2 - inter_x1)
+        inter_h = np.maximum(0.0, inter_y2 - inter_y1)
+        
  
-                inter_Width = max(0,inter_x2 - inter_x1)
-                inter_Height = max(0, inter_y2 - inter_y1)
+        
+        "AoI = Area of Intersection, AoU = Area of Union"
+        AoI = inter_w * inter_h
+        AoU = areaDetection + areaTrack - AoI
+        union_area = areaDetection + areaTrack - AoI
+        iou_matrix = np.where(union_area > 0, AoI / AoU, 0.0)
 
-                AoI = inter_Width * inter_Height
-                AoU = areaA + areaB - AoI
-                IoU = AoI / AoU if AoU != 0 else 0
-
-                cost_matrix[i][j] = 1 - IoU
+        
 
         
        
