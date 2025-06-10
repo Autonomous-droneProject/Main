@@ -73,7 +73,7 @@ class DataAssociation:
         AoI = inter_w * inter_h
         AoU = areaDetection + areaTrack - AoI
        
-        iou_matrix = np.where(union_area > 0, AoI / AoU, 0.0)
+        iou_matrix = np.where(AoU > 0, AoI / AoU, 0.0)
 
         
 
