@@ -36,11 +36,11 @@ class DataAssociation:
         pass
 
    #SORT’s IoU Cost Matrix
-    def iou_cost(detections,tracks):
+    def iou_cost(tracks,detections):
         
         numDetections = len(detections)
         numTracks = len(tracks)
-        cost_matrix = np.zeros((numDetections,numTracks))
+        
         
         det_x1 = detections[:, 0:1]
         det_y1 = detections[:, 1:2]
@@ -80,7 +80,7 @@ class DataAssociation:
 
         
        
-        return cost_matrix
+        return iou_matrix
 
     #SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
     def iou_euclidean_cost(tracks, detections, image_dims):
