@@ -83,10 +83,12 @@ class DataAssociation:
         bbox_cost_matrix = 1.0 - np.minimum(ratio1, ratio2)
         return bbox_cost_matrix
 
-  
+      
     #SORT’s IoU Cost Matrix
     def iou_cost(self,tracks,detections):
 
+        tracks = np.array(tracks)
+        detections = np.array(detections)
         tracks = np.array(tracks)
         detections = np.array(detections)
 
@@ -119,7 +121,7 @@ class DataAssociation:
         AoU = areaDetection + areaTrack - AoI
 
         iou_matrix = np.where(AoU > 0, AoI / AoU, 0.0)
-        
+
         return 1.0 - iou_matrix
 
     #SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
