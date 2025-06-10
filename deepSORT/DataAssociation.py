@@ -187,8 +187,33 @@ class DataAssociation:
 
         A(Di, Pi) = (IoU(Di, Pj) + DE(Di, Pj) + R(Di, Pj)) / 3,  for i ∈ D, j ∈ P
         """
-        pass
+        num_tracks = len(tracks)
+        num_detections = len(detections)
 
+        if num_tracks == 0 or num_detections == 0:
+            return np.array([]) #Return an empty array if there are no tracks or detections
+
+        cost_iou = self.iou_cost(tracks,detections)
+        euclidean_cost = self.euclidean_cost(tracks, detections, image_dims)
+
+        # Get appearance features
+        det_feat = np.array([d.feature for d in detections])
+        trk_feat = np.array([t.feature for t in tracks])
+
+        # Normalize vectors
+        det_feat = det_feat / np.linalg.norm(det_feat, axis=1, keepdims=True)
+        trk_feat = trk_feat / np.linalg.norm(trk_feat, axis=1, keepdims=True)
+
+        # Compute cosine distance matrix (1 - cosine similarity)
+        cost_cosine = 1.0 - np.dot(det_feat, trk_feat.T)
+
+        # Ensure all shapes match
+        if cost_iou.shape != euclidean_cost.shape or cost_iou.shape != cost_cosine.shape:
+            raise ValueError("Cost matrices are not aligned in shape.")
+    
+        #Final cost matrix
+        return (cost_iou + euclidean_cost + cost_cosine) / 3
+    
     #Element-wise Weighted Mean of Every Cost Matrix Value (𝑊𝑀(𝐷,𝑃))
     def weighted_mean_cost_matrix(self, tracks, detections, image_dims, lambda_iou=0.33, lambda_de=0.33, lambda_r=0.34):
         """
