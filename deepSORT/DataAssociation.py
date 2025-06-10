@@ -51,7 +51,7 @@ class DataAssociation:
         return euclidean_cost_matrix
 
     #Bounding Box Ratio Based Cost Matrix (𝑅(𝐷,𝑃))
-    def bbox_ratio_cost(tracks, detections):
+    def bbox_ratio_cost(self, tracks, detections):
         """
         Computes the bounding box ratio-based cost matrix (𝑅(𝐷,𝑃)), which is
         implemented as a ratio between the product of each width and height.
@@ -86,13 +86,13 @@ class DataAssociation:
         return bbox_cost_matrix
 
       
-   #SORT’s IoU Cost Matrix
+    #SORT’s IoU Cost Matrix
     def iou_cost(self,tracks,detections):
-        
+
         tracks = np.array(tracks, copy=False)
         detections = np.array(detections,copy=False)
-        
-        
+
+
         det_x1 = detections[:, 0:1]
         det_y1 = detections[:, 1:2]
         det_x2 = det_x1 + detections[:, 2:3]
@@ -102,11 +102,11 @@ class DataAssociation:
         trk_y1 = tracks[:, 1].reshape(1,-1)
         trk_x2 = trk_x1 + tracks[:, 2].reshape(1,-1)
         trk_y2 = trk_y1 + tracks[:, 3].reshape(1,-1)
-            
+
         detectionWidth = detections[:,2:3]
         detectionHeight = detections[:,3:4]
-        
-               
+
+
         areaDetection = detectionWidth * detectionHeight
         areaTrack = tracks[:, 2].reshape(1, -1) * tracks[:, 3].reshape(1, -1)
 
@@ -117,15 +117,19 @@ class DataAssociation:
 
         inter_w = np.maximum(0.0, inter_x2 - inter_x1)
         inter_h = np.maximum(0.0, inter_y2 - inter_y1)
-        
+
  
-        
+
         "AoI = Area of Intersection, AoU = Area of Union"
         AoI = inter_w * inter_h
         AoU = areaDetection + areaTrack - AoI
-       
+
         iou_matrix = np.where(AoU > 0, AoI / AoU, 0.0)
-       
+
+
+
+
+
         return 1.0 - iou_matrix
 
     #   SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
@@ -175,16 +179,28 @@ class DataAssociation:
    
 
     #Euclidean Distance Cost Matrix Combined with the Bounding Box Ratio Based Cost Matrix (𝑅𝐷𝐸(𝐷,𝑃))
-    def euclidean_bbox_ratio_cost(tracks, detections, image_dims):
+    def euclidean_bbox_ratio_cost(self, tracks, detections, image_dims):
         """
         Computes the Euclidean distance cost matrix combined with the bounding box
         ratio-based cost matrix using the Hadamard (element-wise) product:
-
         RDE(D, P) = DE(D, P) ∘ R(D, P)
-
         where ∘ represents element-wise multiplication.
         """
-        pass
+        num_detections, num_tracks = len(detections), len(tracks)
+        
+        if num_detections == 0 or num_tracks == 0:
+            return np.array([])
+        
+        cost_de = np.asarray(self.euclidean_cost(tracks, detections, image_dims))
+        cost_r = np.asarray(self.bbox_ratio_cost(tracks, detections))
+        
+        if np.shape(cost_de) != np.shape(cost_r):
+            raise ValueError("Euclidean cost matrix and bbox ratio cost matrix are of different shapes")
+        
+        # performs element-wise multiplication
+        cost_rde = np.multiply(cost_de, cost_r)
+
+        return cost_rde
 
       
     #Step 7: SORT's IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix and the Bounding Box Ratio Based Cost Matrix (𝑀(𝐷,𝑃))
