@@ -36,10 +36,10 @@ class DataAssociation:
         pass
 
    #SORT’s IoU Cost Matrix
-    def iou_cost(tracks,detections):
+    def iou_cost(self,tracks,detections):
         
-        numDetections = len(detections)
-        numTracks = len(tracks)
+        tracks = np.array(tracks, copy=False)
+        detections = np.array(detections,copy=False)
         
         
         det_x1 = detections[:, 0:1]
