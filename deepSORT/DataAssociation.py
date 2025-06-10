@@ -27,8 +27,8 @@ class DataAssociation:
         where (h, w) are the height and width of the input image.
         """
         #Retrieve lengths
-        tracks = np.array(tracks, copy=False)
-        detections = np.array(detections, copy=False)
+        tracks = np.array(tracks)
+        detections = np.array(detections)
         N_detections = len(detections)
         N_predictions = len(tracks)
 
@@ -85,12 +85,12 @@ class DataAssociation:
         bbox_cost_matrix = 1.0 - np.minimum(ratio1, ratio2)
         return bbox_cost_matrix
 
-  
+      
     #SORT’s IoU Cost Matrix
     def iou_cost(self,tracks,detections):
 
-        tracks = np.array(tracks, copy=False)
-        detections = np.array(detections,copy=False)
+        tracks = np.array(tracks)
+        detections = np.array(detections)
 
         det_x1 = detections[:, 0:1]
         det_y1 = detections[:, 1:2]
@@ -121,7 +121,7 @@ class DataAssociation:
         AoU = areaDetection + areaTrack - AoI
 
         iou_matrix = np.where(AoU > 0, AoI / AoU, 0.0)
-        
+
         return 1.0 - iou_matrix
 
     #SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
