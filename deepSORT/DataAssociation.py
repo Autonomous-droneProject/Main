@@ -47,18 +47,17 @@ class DataAssociation:
         det_x2 = det_x1 + detections[:, 2:3]
         det_y2 = det_y1 + detections[:, 3:4]
 
-        trk_x1 = tracks[:, 0]
-        trk_y1 = tracks[:, 1]
-        trk_x2 = trk_x1 + tracks[:, 2]
-        trk_y2 = trk_y1 + tracks[:, 3]
+        trk_x1 = tracks[:, 0].reshape(1,-1)
+        trk_y1 = tracks[:, 1].reshape(1,-1)
+        trk_x2 = trk_x1 + tracks[:, 2].reshape(1,-1)
+        trk_y2 = trk_y1 + tracks[:, 3].reshape(1,-1)
             
         detectionWidth = detections[:,2:3]
         detectionHeight = detections[:,3:4]
-        trackWidth = tracks[:,2]
-        trackHeight = tracks[:,3]
+        
                
         areaDetection = detectionWidth * detectionHeight
-        areaTrack = trackWidth * trackHeight  
+        areaTrack = tracks[:, 2].reshape(1, -1) * tracks[:, 3].reshape(1, -1)
 
         inter_x1 = np.maximum(det_x1, trk_x1)
         inter_y1 = np.maximum(det_y1, trk_y1)
@@ -73,14 +72,14 @@ class DataAssociation:
         "AoI = Area of Intersection, AoU = Area of Union"
         AoI = inter_w * inter_h
         AoU = areaDetection + areaTrack - AoI
-        union_area = areaDetection + areaTrack - AoI
+       
         iou_matrix = np.where(union_area > 0, AoI / AoU, 0.0)
 
         
 
         
        
-        return iou_matrix
+        return 1.0 - iou_matrix
 
     #SORT’s IoU Cost Matrix Combined with the Euclidean Distance Cost Matrix (𝐸𝐼𝑜𝑈𝐷(𝐷,𝑃))
     def iou_euclidean_cost(tracks, detections, image_dims):
